@@ -1,0 +1,245 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+
+  --shadow-elevated: 0 10px 30px -10px color-mix(in oklab, var(--primary) 35%, transparent);
+  --shadow-soft: 0 4px 16px -4px oklch(0 0 0 / 0.08);
+}
+
+:root {
+  --radius: 1rem;
+  /* Earthy, field-research palette */
+  --background: oklch(0.985 0.012 95);
+  --foreground: oklch(0.22 0.03 60);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.22 0.03 60);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.22 0.03 60);
+
+  /* Deep forest green primary */
+  --primary: oklch(0.42 0.08 155);
+  --primary-foreground: oklch(0.98 0.01 95);
+
+  --secondary: oklch(0.95 0.02 95);
+  --secondary-foreground: oklch(0.3 0.04 60);
+
+  --muted: oklch(0.95 0.015 90);
+  --muted-foreground: oklch(0.5 0.025 70);
+
+  /* Terracotta accent */
+  --accent: oklch(0.66 0.14 45);
+  --accent-foreground: oklch(0.99 0.01 95);
+
+  --success: oklch(0.62 0.13 150);
+  --success-foreground: oklch(0.99 0.01 95);
+  --warning: oklch(0.78 0.14 75);
+  --warning-foreground: oklch(0.2 0.03 60);
+  --destructive: oklch(0.58 0.2 25);
+  --destructive-foreground: oklch(0.99 0.01 95);
+
+  --border: oklch(0.9 0.015 85);
+  --input: oklch(0.92 0.015 85);
+  --ring: oklch(0.42 0.08 155);
+}
+
+.dark {
+  --background: oklch(0.18 0.02 60);
+  --foreground: oklch(0.96 0.015 90);
+  --card: oklch(0.22 0.025 60);
+  --card-foreground: oklch(0.96 0.015 90);
+  --popover: oklch(0.22 0.025 60);
+  --popover-foreground: oklch(0.96 0.015 90);
+  --primary: oklch(0.72 0.13 150);
+  --primary-foreground: oklch(0.18 0.02 60);
+  --secondary: oklch(0.28 0.025 60);
+  --secondary-foreground: oklch(0.96 0.015 90);
+  --muted: oklch(0.28 0.025 60);
+  --muted-foreground: oklch(0.7 0.02 75);
+  --accent: oklch(0.7 0.14 45);
+  --accent-foreground: oklch(0.18 0.02 60);
+  --success: oklch(0.72 0.13 150);
+  --success-foreground: oklch(0.18 0.02 60);
+  --warning: oklch(0.8 0.14 75);
+  --warning-foreground: oklch(0.18 0.02 60);
+  --destructive: oklch(0.65 0.2 25);
+  --destructive-foreground: oklch(0.99 0.01 95);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.72 0.13 150);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+}
+
+/* Topographic map background pattern */
+.bg-topo {
+  background-color: oklch(0.93 0.03 145);
+  background-image:
+    radial-gradient(ellipse at 20% 30%, oklch(0.85 0.05 145 / 0.6) 0%, transparent 40%),
+    radial-gradient(ellipse at 75% 60%, oklch(0.82 0.06 90 / 0.5) 0%, transparent 45%),
+    radial-gradient(ellipse at 50% 85%, oklch(0.8 0.05 50 / 0.4) 0%, transparent 40%),
+    repeating-radial-gradient(circle at 30% 40%, transparent 0, transparent 18px, oklch(0.6 0.05 145 / 0.08) 18px, oklch(0.6 0.05 145 / 0.08) 19px),
+    repeating-radial-gradient(circle at 70% 65%, transparent 0, transparent 22px, oklch(0.5 0.06 90 / 0.07) 22px, oklch(0.5 0.06 90 / 0.07) 23px);
+}
+
+.grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence baseFrequency='0.9'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.6); opacity: 0.8; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+.pulse-ring { animation: pulse-ring 2s ease-out infinite; }
+
+@keyframes slide-up {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.slide-up { animation: slide-up 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+
+/* Leaflet / Naksha map */
+.naksha-leaflet-map {
+  height: 100%;
+  width: 100%;
+  font-family: inherit;
+}
+.leaflet-container {
+  background: oklch(0.93 0.03 145);
+  font-family: inherit;
+}
+.naksha-house-marker,
+.naksha-user-marker {
+  background: transparent !important;
+  border: none !important;
+}
+.naksha-pin-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.naksha-pin {
+  width: 28px;
+  height: 28px;
+  border-radius: 50% 50% 50% 4px;
+  transform: rotate(45deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+.naksha-pin svg {
+  transform: rotate(-45deg);
+}
+.naksha-pin-label {
+  margin-top: 2px;
+  font-size: 8px;
+  font-weight: 700;
+  color: rgba(61, 52, 41, 0.85);
+  background: rgba(255, 255, 255, 0.85);
+  padding: 0 4px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.naksha-user-wrap {
+  position: relative;
+  width: 40px;
+  height: 40px;
+}
+.naksha-user-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: oklch(0.42 0.08 155 / 0.4);
+  animation: pulse-ring 2s ease-out infinite;
+}
+.naksha-user-dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border-radius: 50%;
+  background: oklch(0.42 0.08 155);
+  border: 3px solid white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.naksha-user-arrow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  margin-left: -6px;
+  margin-top: -22px;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 12px solid oklch(0.42 0.08 155);
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.15));
+  transform-origin: 6px 22px;
+  opacity: 0.85;
+}
+
+.naksha-pin-highlight {
+  box-shadow: 0 0 0 6px rgba(245,158,11,0.08), 0 6px 18px rgba(245,158,11,0.2);
+  transform: scale(1.06) rotate(45deg);
+}
