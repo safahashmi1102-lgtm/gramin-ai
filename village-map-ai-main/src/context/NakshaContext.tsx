@@ -79,6 +79,7 @@ type NakshaContextValue = {
   addTrailCoordinate: (lat: number, lng: number) => void;
   clearTrail: () => void;
   toggleTrailVisibility: () => void;
+  deleteHousehold: (uid: string) => void;
 };
 
 const NakshaContext = createContext<NakshaContextValue | null>(null);
@@ -433,6 +434,11 @@ export function NakshaProvider({ children }: { children: ReactNode }): React.Rea
       );
       pushHistory({ type: "delete", marker: existing });
       applyMarkers(numbered, c, mo);
+      try {
+        localStorage.removeItem(`survey-draft-${uid}`);
+      } catch (e) {
+        // ignore
+      }
       // store last deleted for undo
       lastDeleted.current = existing;
       setUndoDeleteAvailable(true);
@@ -454,6 +460,8 @@ export function NakshaProvider({ children }: { children: ReactNode }): React.Rea
       closeSheet,
     ],
   );
+
+  
 
   const undo = useCallback(() => {
     setHistory((h) => {
@@ -650,6 +658,7 @@ export function NakshaProvider({ children }: { children: ReactNode }): React.Rea
       updateMarker,
       deleteMarker,
       undo,
+      undoDelete,
       setNumberingMode,
       setManualOrderUids,
       moveManualOrder,
