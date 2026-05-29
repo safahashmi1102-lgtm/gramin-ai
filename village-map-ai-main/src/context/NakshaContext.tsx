@@ -33,6 +33,12 @@ type MarkerDraft = {
   placementSource: "gps" | "manual";
 };
 
+export type TrailCoordinate = {
+  lat: number;
+  lng: number;
+  timestamp: number;
+};
+
 type NakshaContextValue = {
   markers: HouseRecord[];
   numberingMode: NumberingMode;
@@ -49,6 +55,8 @@ type NakshaContextValue = {
   draft: MarkerDraft | null;
   canUndo: boolean;
   hydrated: boolean;
+  trailCoordinates: TrailCoordinate[];
+  trailVisible: boolean;
   setSelectedUid: (uid: string | null) => void;
   addHouseAtGps: (lat: number, lng: number, accuracy: number | null) => void;
   openCreateAt: (lat: number, lng: number, accuracy?: number | null) => void;
@@ -68,6 +76,9 @@ type NakshaContextValue = {
   getMarker: (uid: string) => HouseRecord | undefined;
   previewHouseNumber: (lat: number, lng: number) => string;
   undoDelete: () => void;
+  addTrailCoordinate: (lat: number, lng: number) => void;
+  clearTrail: () => void;
+  toggleTrailVisibility: () => void;
 };
 
 const NakshaContext = createContext<NakshaContextValue | null>(null);
@@ -95,6 +106,9 @@ export function NakshaProvider({ children }: { children: ReactNode }): React.Rea
   const [isSaving, setIsSaving] = useState(false);
   const autosaveTimer = useRef<number | null>(null);
   const skipSave = useRef(true);
+  const [trailCoordinates, setTrailCoordinates] = useState<TrailCoordinate[]>([]);
+  const [trailVisible, setTrailVisibleState] = useState(true);
+  const lastTrailCoordinate = useRef<TrailCoordinate | null>(null);
 
   useEffect(() => {
     const stored = loadNakshaState();
@@ -542,6 +556,32 @@ export function NakshaProvider({ children }: { children: ReactNode }): React.Rea
 
   const getMarker = useCallback((uid: string) => markers.find((m) => m.uid === uid), [markers]);
 
+  const addTrailCoordinate = useCallback((lat: number, lng: number) => {
+    const now = Date.now();
+    const lastCoord = lastTrailCoordinate.current;
+    // Only add if significantly different from last point (debounce to avoid too many points)
+    const minDistance = 0.00005; // ~5 meters
+    if (lastCoord) {
+      const dlat = Math.abs(lat - lastCoord.lat);
+      const dlng = Math.abs(lng - lastCoord.lng);
+      if (dlat < minDistance && dlng < minDistance) {
+        return;
+      }
+    }
+    const newCoord: TrailCoordinate = { lat, lng, timestamp: now };
+    lastTrailCoordinate.current = newCoord;
+    setTrailCoordinates((prev) => [...prev, newCoord]);
+  }, []);
+
+  const clearTrail = useCallback(() => {
+    setTrailCoordinates([]);
+    lastTrailCoordinate.current = null;
+  }, []);
+
+  const toggleTrailVisibility = useCallback(() => {
+    setTrailVisibleState((prev) => !prev);
+  }, []);
+
   const value = useMemo(
     () => ({
       markers,
@@ -559,6 +599,8 @@ export function NakshaProvider({ children }: { children: ReactNode }): React.Rea
       undoDeleteAvailable,
       canUndo: history.length > 0,
       hydrated,
+      trailCoordinates,
+      trailVisible,
       setSelectedUid,
       addHouseAtGps,
       openCreateAt,
@@ -578,6 +620,9 @@ export function NakshaProvider({ children }: { children: ReactNode }): React.Rea
       markDone,
       getMarker,
       previewHouseNumber,
+      addTrailCoordinate,
+      clearTrail,
+      toggleTrailVisibility,
     }),
     [
       markers,
@@ -595,6 +640,8 @@ export function NakshaProvider({ children }: { children: ReactNode }): React.Rea
       undoDeleteAvailable,
       history.length,
       hydrated,
+      trailCoordinates,
+      trailVisible,
       addHouseAtGps,
       openCreateAt,
       openEdit,
@@ -609,6 +656,9 @@ export function NakshaProvider({ children }: { children: ReactNode }): React.Rea
       markDone,
       getMarker,
       previewHouseNumber,
+      addTrailCoordinate,
+      clearTrail,
+      toggleTrailVisibility,
     ],
   );
 

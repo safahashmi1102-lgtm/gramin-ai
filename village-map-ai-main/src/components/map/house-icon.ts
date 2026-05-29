@@ -2,9 +2,9 @@ import L from "leaflet";
 import type { MarkerStatus } from "@/lib/naksha-types";
 
 const statusColor: Record<MarkerStatus, string> = {
-  done: "oklch(0.62 0.13 150)",
-  pending: "oklch(0.78 0.14 75)",
-  ai: "oklch(0.66 0.14 45)",
+  done: "#38a169",
+  pending: "#f59e0b",
+  ai: "#f97316",
 };
 
 export function createHouseIcon(status: MarkerStatus, houseNumber: string, highlight = false) {

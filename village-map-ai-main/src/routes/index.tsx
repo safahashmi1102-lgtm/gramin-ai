@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import html2canvas from "html2canvas";
+import domtoimage from "dom-to-image-more";
 import {
   MapPin,
   Home,
@@ -24,11 +24,12 @@ import {
   GraduationCap,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import type { Map as LeafletMap } from "leaflet";
 import { CoordNavigateSheet } from "@/components/map/CoordNavigateSheet";
 import { ManualOrderSheet } from "@/components/map/ManualOrderSheet";
 import { MapToolsMenu } from "@/components/map/MapToolsMenu";
 import { MarkerSheet } from "@/components/map/MarkerSheet";
-import { VillageMap } from "@/components/map/VillageMap";
+import { SATELLITE_MAX_ZOOM, VillageMap } from "@/components/map/VillageMap";
 import { NakshaProvider, useNaksha } from "@/context/NakshaContext";
 import { useGeolocation } from "@/hooks/use-geolocation";
 import { useReverseGeocode } from "@/hooks/use-reverse-geocode";
@@ -161,10 +162,16 @@ function MapScreen() {
     hydrated,
     syncStatus,
     isSaving,
+    trailCoordinates,
+    trailVisible,
+    addTrailCoordinate,
+    clearTrail,
+    toggleTrailVisibility,
   } = useNaksha();
   const { position, label, accuracyLabel, watching, error: gpsError, refresh } = useGeolocation();
   const { place } = useReverseGeocode(position?.lat ?? null, position?.lng ?? null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<LeafletMap | null>(null);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [coordOpen, setCoordOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
@@ -174,8 +181,18 @@ function MapScreen() {
   const [navigateSignal, setNavigateSignal] = useState(0);
   const [navigateTarget, setNavigateTarget] = useState<{ lat: number; lng: number } | null>(null);
 
+  const handleMapCreated = useCallback((map: LeafletMap) => {
+    mapRef.current = map;
+  }, []);
+
   const doneCount = markers.filter((m) => m.status === "done").length;
   const pendingCount = markers.filter((m) => m.status === "pending").length;
+
+  // Track GPS positions and record trail when watching is active
+  useEffect(() => {
+    if (!watching || !position) return;
+    addTrailCoordinate(position.lat, position.lng);
+  }, [watching, position, addTrailCoordinate]);
 
   const handleAddHouse = useCallback(() => {
     if (!position) {
@@ -190,25 +207,81 @@ function MapScreen() {
   }, [position, addHouseAtGps, refresh, gpsError]);
 
   const exportMap = useCallback(async () => {
-    const el = mapContainerRef.current;
+    const el = mapContainerRef.current?.querySelector(".leaflet-container") as HTMLElement | null;
     if (!el) return;
+
     setExporting(true);
+
+    const waitForTiles = async () => {
+      const tileImages = Array.from(el.querySelectorAll<HTMLImageElement>(".leaflet-tile")).filter(
+        (tile): tile is HTMLImageElement => tile instanceof HTMLImageElement,
+      );
+
+      const pending = tileImages.filter((tile) => !tile.complete || tile.naturalWidth === 0);
+      if (pending.length === 0) return;
+
+      await Promise.all(
+        pending.map(
+          (tile) =>
+            new Promise<void>((resolve) => {
+              const finish = () => {
+                tile.removeEventListener("load", finish);
+                tile.removeEventListener("error", finish);
+                resolve();
+              };
+
+              tile.addEventListener("load", finish);
+              tile.addEventListener("error", finish);
+
+              if (tile.complete && tile.naturalWidth !== 0) {
+                finish();
+              }
+            }),
+        ),
+      );
+    };
+
+    const styleEl = document.createElement("style");
+    styleEl.dataset.exportStyle = "leaflet-tile-image-rendering";
+    styleEl.textContent = `
+      .leaflet-tile {
+        image-rendering: auto !important;
+      }
+      .leaflet-tile-container img,
+      .leaflet-tile {
+        image-rendering: auto !important;
+      }
+    `;
+    document.head.appendChild(styleEl);
+
     try {
-      const canvas = await html2canvas(el, {
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-        scale: 2,
-        backgroundColor: null,
+      mapRef.current?.invalidateSize();
+      await waitForTiles();
+      const blob = await domtoimage.toBlob(el, {
+        bgcolor: "#ffffff",
+        width: el.clientWidth,
+        height: el.clientHeight,
+        style: {
+          background: "transparent",
+        },
       });
+
       const link = document.createElement("a");
-      link.download = `naksha-map-${new Date().toISOString().slice(0, 10)}.png`;
-      link.href = canvas.toDataURL("image/png");
+      const now = new Date();
+      const dateStr = now.toISOString().split("T")[0];
+      const timeStr = now.toTimeString().split(" ")[0].replace(/:/g, "-");
+      link.download = `naksha-map-${dateStr}-${timeStr}.png`;
+      link.href = URL.createObjectURL(blob);
       link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (error) {
+      console.error("Map export failed:", error);
+      alert("Failed to export map. Please check console and try again.");
     } finally {
+      styleEl.remove();
       setExporting(false);
     }
-  }, []);
+  }, [setExporting]);
 
   const exportAllJson = useCallback(() => {
     downloadText(
@@ -320,6 +393,9 @@ function MapScreen() {
             navigateSignal={navigateSignal}
             navigateTarget={navigateTarget}
             mapContainerRef={mapContainerRef}
+            onMapCreated={handleMapCreated}
+            trailCoordinates={trailCoordinates}
+            trailVisible={trailVisible}
           />
         ) : (
           <div className="absolute inset-0 bg-topo animate-pulse" />
@@ -341,6 +417,61 @@ function MapScreen() {
           >
             <Navigation className="h-4 w-4 text-primary" />
           </MapBtn>
+          <MapBtn
+            onClick={() => {
+              const map = mapRef.current;
+              if (!map) return;
+              const currentMaxZoom = mapLayer === "satellite" ? SATELLITE_MAX_ZOOM : 19;
+              const currentZoom = map.getZoom();
+              if (currentZoom >= currentMaxZoom) return;
+              const target = Math.min(currentMaxZoom, currentZoom + 0.5);
+              if (target === currentZoom) return;
+              map.setZoom(target, { animate: true });
+            }}
+            aria-label="Zoom in"
+            title="Zoom in"
+          >
+            <span className="text-lg font-semibold">+</span>
+          </MapBtn>
+          <MapBtn
+            onClick={() => {
+              const map = mapRef.current;
+              if (!map) return;
+              const currentMaxZoom = mapLayer === "satellite" ? SATELLITE_MAX_ZOOM : 19;
+              const target = Math.min(currentMaxZoom, Math.max(map.getMinZoom(), map.getZoom() - 0.5));
+              map.setZoom(target, { animate: true });
+            }}
+            aria-label="Zoom out"
+            title="Zoom out"
+          >
+            <span className="text-lg font-semibold">−</span>
+          </MapBtn>
+          <>
+            <MapBtn
+              onClick={() => {
+                if (trailCoordinates.length === 0) return;
+                toggleTrailVisibility();
+              }}
+              disabled={trailCoordinates.length === 0}
+              aria-label={trailVisible ? "Hide trail" : "Show trail"}
+              title={trailVisible ? "Hide trail" : "Show trail"}
+            >
+              <span className="text-lg">{trailVisible ? "👁️" : "🚫"}</span>
+            </MapBtn>
+            <MapBtn
+              onClick={() => {
+                if (trailCoordinates.length === 0) return;
+                if (window.confirm("Delete recorded trail? This cannot be undone.")) {
+                  clearTrail();
+                }
+              }}
+              disabled={trailCoordinates.length === 0}
+              aria-label="Clear trail"
+              title="Clear trail"
+            >
+              <span className="text-lg">🗑️</span>
+            </MapBtn>
+          </>
         </div>
 
         <MapToolsMenu
@@ -364,6 +495,14 @@ function MapScreen() {
           canUndo={canUndo}
           exporting={exporting}
         />
+
+        {exporting ? (
+          <div className="absolute inset-x-0 top-0 z-[420] flex justify-center pt-4 pointer-events-none">
+            <div className="rounded-full bg-background/95 text-foreground px-4 py-2 text-xs font-semibold shadow-soft border border-border/60 backdrop-blur">
+              Capturing map… please keep the view steady
+            </div>
+          </div>
+        ) : null}
 
         <button
           type="button"
